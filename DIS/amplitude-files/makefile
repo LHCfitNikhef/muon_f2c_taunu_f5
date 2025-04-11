@@ -1,5 +1,8 @@
 FC = gfortran
 POWHEGPATH=$(PWD)/../..
+ifeq ("$(shell whoami)", "pkrack")
+POWHEGPATH=/data/theorie/pkrack/POWHEG-BOX-RES
+endif
 STD=-lstdc++
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)

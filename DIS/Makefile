@@ -1,6 +1,11 @@
 #-*- Makefile -*-
 ###USER specific 
 POWHEGPATH=$(PWD)/..
+
+ifeq ("$(shell whoami)", "pkrack")
+POWHEGPATH=/data/theorie/pkrack/POWHEG-BOX-RES
+endif
+
 LHAPDF_CONFIG=$(shell which lhapdf-config)
 FASTJET_CONFIG=$(shell which fastjet-config)
 PYTHIA8_CONFIG=$(shell which pythia8-config)
@@ -19,6 +24,7 @@ ANALYSIS=flux
 ifeq ("$(COMPILER)","gfortran")	
 F77= gfortran -fno-automatic 	-ffixed-line-length-none
 CXX= g++  -std=c++11
+
 ## NOTE: -fbounds-check sometimes causes a compilation error
 ## due to non-lazy evaluation of boolean in gfortran.
 # FFLAGS= -Wall -Wimplicit-interface
