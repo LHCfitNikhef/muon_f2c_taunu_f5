@@ -69,10 +69,8 @@ c Only on EOF return with no event found
      &           mothup(2,i),icolup(1,i),icolup(2,i),(pup(j,i),j=1,5),
      &           vtimup(i),spinup(i)
 C PK for neutrino set ebmup=pup(3,i)
-            IF(ABS(idup(i)).EQ.12.AND.istup(i).EQ.-1)THEN
-               ebmup(1)=pup(3,i)
-            ELSE IF(ABS(idup(i)).EQ.14.AND.istup(i).EQ.-1)THEN
-               ebmup(1)=pup(3,i)
+            IF(ABS(idup(i)).GE.11.AND.ABS(idup(i)).LE.16.AND.istup(i).EQ.-1)THEN
+               ebmup(1)=pup(4,i)
             END IF
          enddo
          call lhefreadextra(nlf,iret)
