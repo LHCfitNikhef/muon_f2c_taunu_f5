@@ -1,4 +1,5 @@
       program main_pythia8
+      USE ISO_C_BINDING
       implicit none
       include "nlegborn.h"
       include "pwhg_rwl.h"
@@ -8,6 +9,7 @@
       include 'hepevt.h'
       include "pwhg_rad.h"
       include "PhysPars.h"
+      include 'pwhg_rnd.h'
       character * 6 WHCPRG
       common/cWHCPRG/WHCPRG
       integer j,k,l,m,iret
@@ -22,12 +24,29 @@
       real * 8 ub_btilde_corr,ub_remn_corr,ub_reg_corr,ub_corr
       logical NaNInEvent
       integer i1, i2
+      CHARACTER(LEN=80,KIND=C_CHAR),TARGET :: hepmc_filename
+
+      INTERFACE 
+         SUBROUTINE pythia_next(iret,nwgt,wgt) 
+     1     BIND(C,NAME="pythia_next_")
+            USE ISO_C_BINDING
+            INTEGER(KIND=4) :: iret,nwgt
+            REAL(KIND=4),DIMENSION(*),INTENT(IN) :: wgt
+         END SUBROUTINE pythia_next
+      END INTERFACE
+
+      INTERFACE
+         SUBROUTINE pythia_set_hepmc(filename) 
+     1              BIND(C,NAME="pythia_set_hepmc_")
+            USE ISO_C_BINDING
+            CHARACTER(KIND=C_CHAR) :: filename
+         END SUBROUTINE pythia_set_hepmc
+      END INTERFACE 
 
 c     Pythia pp tune
       tune  = powheginput("#py8tune")
 
-!hepmc = powheginput("#py8hepmc")
-      hepmc = -1
+      hepmc = powheginput("#py8hepmc")
 
 c     Hadronization: 0 = Off, 1 = On, 2 = On with heavy hadron decays off [Default]
       had   = powheginput("#py8had")
@@ -90,6 +109,17 @@ c particle masses for reshuffling
       call lhefinitemasses
 
       call pythia_init
+
+      IF(rnd_cwhichseed.NE."none")THEN
+         hepmc_filename="pwgPOWHEG+PYTHIA8-output-"
+     1//TRIM(ADJUSTL(rnd_cwhichseed))
+     2 //".hepmc"//C_NULL_CHAR
+      ELSE
+         hepmc_filename="pwgPOWHEG+PYTHIA8-output.hepmc"//C_NULL_CHAR
+      END IF
+      IF(hepmc.GT.0)THEN
+         CALL pythia_set_hepmc(hepmc_filename)
+      END IF
      
       nevhep=0
 
@@ -124,17 +154,10 @@ c   using the ub_..._corr factors
      $           ub_corr * rwl_weights(1:rwl_num_weights)
          endif
          xwgtup = ub_corr * xwgtup
-      
-           
-         
-     
-         
-        
-
 
          do m=1,5
 c Insist to shower this event;
-            call pythia_next(iret)
+            call pythia_next(iret, rwl_num_weights, rwl_weights)
             if(iret.ne.1) then
                write(*,*) ' return code ',iret
                if(m.eq.1) then

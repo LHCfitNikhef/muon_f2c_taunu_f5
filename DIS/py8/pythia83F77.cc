@@ -72,6 +72,8 @@ bool loadHooks = false;
 
 shared_ptr<HepMC::IO_GenEvent> ptrHepMC = NULL;
 shared_ptr<HepMC::Pythia8ToHepMC> toHepMC  = NULL;
+shared_ptr<Pythia8::Pythia8ToHepMC> writeToHepMC  = NULL;
+
 
 
 std::shared_ptr<myLHAupFortran> LHAinstance{new myLHAupFortran()};
@@ -83,6 +85,12 @@ extern "C" {
     pythia->readString(string);
   }
 
+  void pythia_set_hepmc_(const char* filename) {
+     if(cpy8pars_.hepmc > 0) {
+        writeToHepMC  = make_shared<Pythia8::Pythia8ToHepMC>();
+        writeToHepMC->setNewFile(filename);
+     }
+  }
   void pythia_init_() {
 
     // Print minimal output to disply during init
@@ -95,6 +103,7 @@ extern "C" {
     pythia->readString("Init:showAllSettings = off");    
     pythia->readString("PDF:neutrino = on");
     pythia->readString("PDF:lepton = on");
+    pythia->settings.addFlag("Main:writeHepMC",true);
 
     // Vincia
     if(cpy8pars_.shower >= vincia){
@@ -349,7 +358,8 @@ extern "C" {
   //   pythia.reinit();
   //}
 
-  void pythia_next_(int & iret){
+  // PK also pass the array containing the weights from reweighting.
+  void pythia_next_(int & iret, int* rwl_num_weights, float *wgt){
   // Begin event loop. Generate event. Skip if error. List first one.
   
     iret = pythia->next();
@@ -367,12 +377,22 @@ extern "C" {
 	// Units will be as chosen for HepMC build, but can be changed
 	// by arguments, e.g. GenEvt( HepMC::Units::GEV, HepMC::Units::MM)
 	HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+   // Store multiple weights.
 	toHepMC->fill_next_event( *pythia , hepmcevt );
-	// // FIX BELOW to allow multiple weights  ---> NOT TESTED
-	// HepMC::WeightContainer& weights = hepmcevt->weights();
-	// weights.clear();
-	// weights["000"] = _lastWeight.central();
-	// Write out the HepMC event.
+   // PK: fill the current event into the Pythia8ToHepMC class
+   writeToHepMC->fillNextEvent(*pythia);
+   // PK: Create a vector of strings containing the weight names.
+   std::vector<std::string> wgt_names;
+   for (int i = 0; i < *rwl_num_weights; i = i + 1) {
+      wgt_names.push_back("W" + std::to_string(i)); 
+   }
+   // PK: Create a vector containing the weights passed from fortran.
+   std::size_t nwgt = static_cast<std::size_t>(*rwl_num_weights);
+   std::vector<double> wgt_vector(nwgt);
+   std::transform(wgt, wgt + nwgt, wgt_vector.begin(), [](float f) {return static_cast<double>(f);}); // PK: Oh, how I hate C++ ...
+   writeToHepMC->setWeightNames(wgt_names);
+   writeToHepMC->setWeights(wgt_vector);
+   writeToHepMC->writeEvent();
 	*ptrHepMC << hepmcevt;
 	delete hepmcevt;
       }
