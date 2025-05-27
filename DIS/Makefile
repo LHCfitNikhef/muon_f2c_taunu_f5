@@ -20,10 +20,11 @@ COMPILER=gfortran
 #ANALYSIS=eic
 #ANALYSIS=dummy
 ANALYSIS=flux
+ANALYSIS=forwardhadron
 
 ifeq ("$(COMPILER)","gfortran")	
-F77= gfortran -fno-automatic 	-ffixed-line-length-none
-CXX= g++  -std=c++11
+F77= gfortran -g -ggdb -fno-automatic 	-ffixed-line-length-none -fbacktrace
+CXX= g++  -g -std=c++11
 
 ## NOTE: -fbounds-check sometimes causes a compilation error
 ## due to non-lazy evaluation of boolean in gfortran.
@@ -94,15 +95,18 @@ else
 	ifeq ("$(ANALYSIS)","flux")
 		PWHGANAL+=pwhg_analysis_flux.o 
 	endif
+	ifeq ("$(ANALYSIS)","forwardhadron")
+		PWHGANAL+=pwhg_analysis_forwardhadron.o 
+	endif
 endif
 
 PWHGANAL+=multi_plot.o 
 
 %.o: %.f $(INCLUDE) | $(OBJDIR)
-	$(FF) -c -o $(OBJDIR)/$@ $<
+	$(FF) -c -J$(OBJDIR) -o $(OBJDIR)/$@ $<
 
 %.o: %.f90 $(INCLUDE) | $(OBJDIR)
-	$(FF)  -ffree-line-length-512 -c -o $(OBJ)/$@ $<
+	$(FF)  -ffree-line-length-512 -c -J$(OBJDIR) -o $(OBJ)/$@ $< 
 
 %.o: %.c | $(OBJDIR)
 	$(CC) $(DEBUG) -c -o $(OBJ)/$@ $^ 
@@ -118,7 +122,7 @@ USER=init_couplings.o init_processes.o Born_phsp.o Born.o virtual.o	\
 
 AMP=braket_vbf.o help_hh.o qq_ee.o qqj_ee.o
 
-PWHG=pwhg_main.o pwhg_init.o bbinit.o btilde.o lhefwrite.o		\
+PWHG=pwhg_main.o hist2d.o pwhg_init.o bbinit.o btilde.o lhefwrite.o		\
 	LesHouches.o LesHouchesreg.o gen_Born_phsp.o find_regions.o	\
 	test_Sudakov.o pt2maxreg.o sigborn.o gen_real_phsp.o maxrat.o	\
 	gen_index.o gen_radiation.o Bornzerodamp.o sigremnants.o	\
@@ -147,7 +151,7 @@ amplitude-files/libamplitude.a: amplitude-files/*f
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
-LHEF=lhef_analysis.o boostrot.o random.o cernroutines.o	\
+LHEF=lhef_analysis.o hist2d.o boostrot.o random.o cernroutines.o	\
      opencount.o powheginput.o $(PWHGANAL)	\
      lhefread.o pwhg_io_interface.o rwl_weightlists.o newunit.o pwhg_analysis_driver.o locks.o $(FPEOBJ)
 
@@ -162,7 +166,7 @@ LIBPYTHIA8=$(shell $(PYTHIA8_CONFIG) --ldflags)
 LIBHEPMC=-lHepMC
 
 # target to read event file, shower events with PYTHIA8 + analysis
-PYTHIA8=main-PYTHIA8.o pythia83F77.o powheginput_cpp.o	      \
+PYTHIA8=main-PYTHIA8.o hist2d.o pythia83F77.o powheginput_cpp.o	      \
 	powheginput.o pwhg_io_interface.o rwl_weightlists.o	      \
 	$(PWHGANAL) opencount.o lhefread.o newunit.o pdfdummies.o     \
 	reshufflemoms.o random.o cernroutines.o bra_ket_subroutines.o \
@@ -178,6 +182,6 @@ main-PYTHIA8-lhef: $(PYTHIA8)
 .PHONY: clean
 
 clean:
-	rm -f $(OBJ)/*.o pwhg_main lhef_analysis	\
+	rm -f $(OBJ)/*.o $(OBJ)/*.mod pwhg_main lhef_analysis	\
 	main-PYTHIA8-lhef amplitude-files/*.o amplitude-files/libamplitude.a
 

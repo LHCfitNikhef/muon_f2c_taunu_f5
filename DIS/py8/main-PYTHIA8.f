@@ -208,6 +208,7 @@ c---user's terminal calculations
 
 
       subroutine pyanal
+      use hist2d, only: ddDist_add_event
       implicit none
       include 'LesHouches.h'
       include 'hepevt.h'
@@ -220,18 +221,22 @@ c     check parameters
       if(abs(idwtup).eq.3) xwgtup=xwgtup*xsecup(1)
       call analysis(xwgtup)
       call pwhgaccumup
+      call ddDist_add_event
       end
 
       
       subroutine pyaend
+      use hist2d
       character * 6 vetoname
       character * 20 pwgprefix
       character * 100 filename
+      character * 80 filenamedd
       integer lprefix
       common/cpwgprefix/pwgprefix,lprefix
       include 'pwhg_rnd.h'
       logical analysis_jetveto
       common/canalysis_jetveto/analysis_jetveto
+      integer i
 
       if(analysis_jetveto) then
          vetoname=trim(adjustl('_veto'))
@@ -248,6 +253,10 @@ c     check parameters
 
       call pwhgsetout
       call pwhgtopout(filename)
+      DO i=LBOUND(dists,1),UBOUND(dists,1)
+         filenamedd="POWHEG+PYTHIA8-output-"//TRIM(rnd_cwhichseed)//"-"//TRIM(ADJUSTL(dists(i)%str))
+         CALL dists(i)%write_to(filenamedd)
+      END DO
       end
 
       subroutine printleshouches
