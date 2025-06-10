@@ -93,3 +93,4 @@ POWHEG:MPIveto = 0
 !      with pT>pThard from the Born level process, the event is accepted
 !      and no further veto of this event is allowed (for any pTemt).
 POWHEG:QEDveto = 0
+Main:writeHepMC = on           ! Write .hepmc events to a file.
